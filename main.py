@@ -84,8 +84,7 @@ class EcuadorNewsMonitor:
     
     def search_news(self):
         """Buscar noticias relevantes"""
-        print(f"🔍 Iniciando búsqueda - {datetime.now().strftime('%Y-%m-%d 
-%H:%M:%S')}")
+        print(f"🔍 Iniciando búsqueda - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         new_articles = []
         
         for source in self.sources:
