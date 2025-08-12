@@ -13,8 +13,7 @@ import threading
 class EcuadorNewsMonitor:
     def __init__(self):
         # Variables de entorno Railway
-        self.bot_token = os.getenv('TELEGRAM_BOT_TOKEN', 
-'7731785599:AAFWO_-Dc6oUtvc5NCc1Ms2qiNZwc76T2KA')
+        self.bot_token = os.getenv('TELEGRAM_BOT_TOKEN', '7731785599:AAFWO_-Dc6oUtvc5NCc1Ms2qiNZwc76T2KA')
         self.chat_id = os.getenv('TELEGRAM_CHAT_ID', '5075463133')
         
         # Verificar configuración
@@ -42,16 +41,11 @@ class EcuadorNewsMonitor:
             'https://www.elcomercio.com/rss/',
             'https://www.eluniverso.com/rss/', 
             'https://www.primicias.ec/rss/',
-            
-'https://news.google.com/rss/search?q=Ecuador+minería&hl=es&gl=EC&ceid=EC:es',
-            
-'https://news.google.com/rss/search?q=CONAIE&hl=es&gl=EC&ceid=EC:es',
-            
-'https://news.google.com/rss/search?q=PLUSPETROL+Ecuador&hl=es&gl=EC&ceid=EC:es',
-            
-'https://news.google.com/rss/search?q=SOLGOLD&hl=es&gl=EC&ceid=EC:es',
-            
-'https://news.google.com/rss/search?q="DUNDEE+PRECIOUS+METALS"&hl=es&gl=EC&ceid=EC:es'
+            'https://news.google.com/rss/search?q=Ecuador+minería&hl=es&gl=EC&ceid=EC:es',
+            'https://news.google.com/rss/search?q=CONAIE&hl=es&gl=EC&ceid=EC:es',
+            'https://news.google.com/rss/search?q=PLUSPETROL+Ecuador&hl=es&gl=EC&ceid=EC:es',
+            'https://news.google.com/rss/search?q=SOLGOLD&hl=es&gl=EC&ceid=EC:es',
+            'https://news.google.com/rss/search?q="DUNDEE+PRECIOUS+METALS"&hl=es&gl=EC&ceid=EC:es'
         ]
         
         # Archivo para evitar duplicados
@@ -79,8 +73,7 @@ class EcuadorNewsMonitor:
     
     def clean_text(self, text):
         """Limpiar texto para análisis"""
-        return text.lower().replace('á', 'a').replace('é', 
-'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u')
+        return text.lower().replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u')
     
     def search_news(self):
         """Buscar noticias relevantes"""
@@ -98,8 +91,8 @@ class EcuadorNewsMonitor:
                     print(f"⚠️ Sin entradas en: {source}")
                     continue
                 
-                for entry in feed.entries[:10]:  # Solo primeros 10 para 
-eficiencia
+                # Solo primeros 10 para eficiencia
+                for entry in feed.entries[:10]:
                     try:
                         # Contenido a analizar
                         title = getattr(entry, 'title', '')
@@ -116,18 +109,15 @@ eficiencia
                         
                         if found_keywords:
                             # ID único para evitar duplicados
-                            article_id = 
-hashlib.md5(f"{title}{entry.link}".encode('utf-8')).hexdigest()
+                            article_id = hashlib.md5(f"{title}{entry.link}".encode('utf-8')).hexdigest()
                             
                             if article_id not in self.seen_articles:
                                 article = {
                                     'title': title,
                                     'url': entry.link,
                                     'keywords': found_keywords,
-                                    'date': getattr(entry, 'published', 
-'Sin fecha'),
-                                    'source': 
-self.get_source_name(source),
+                                    'date': getattr(entry, 'published', 'Sin fecha'),
+                                    'source': self.get_source_name(source),
                                     'id': article_id
                                 }
                                 
@@ -143,8 +133,7 @@ self.get_source_name(source),
                 print(f"❌ Error con fuente {source}: {e}")
                 continue
         
-        print(f"📊 Búsqueda completada: {len(new_articles)} noticias 
-nuevas")
+        print(f"📊 Búsqueda completada: {len(new_articles)} noticias nuevas")
         return new_articles
     
     def get_source_name(self, url):
@@ -165,16 +154,15 @@ nuevas")
         keywords_str = ' '.join(keywords).upper()
         
         if 'CONAIE' in keywords_str:
-            return '🏛️'  # Político/institucional
-        elif any(company in keywords_str for company in ['SOLGOLD', 
-'DUNDEE', 'PLUSPETROL']):
-            return '💰'  # Empresas
+            return '🏛️'
+        elif any(company in keywords_str for company in ['SOLGOLD', 'DUNDEE', 'PLUSPETROL']):
+            return '💰'
         elif 'MINERÍA' in keywords_str or 'MINERA' in keywords_str:
-            return '⛏️'  # Minería general
+            return '⛏️'
         elif 'INDÍGENAS' in keywords_str or 'ANCESTRAL' in keywords_str:
-            return '🌿'  # Pueblos indígenas
+            return '🌿'
         else:
-            return '📢'  # General
+            return '📢'
     
     def send_telegram_alert(self, article):
         """Enviar alerta por Telegram"""
@@ -254,8 +242,7 @@ Fuente: {article['source']}
                 # Guardar progreso
                 self.save_seen_articles()
                 
-                print(f"✅ Enviadas {sent_count}/{len(new_articles)} 
-alertas")
+                print(f"✅ Enviadas {sent_count}/{len(new_articles)} alertas")
                 
             else:
                 print("📭 No hay noticias nuevas en este ciclo")
@@ -286,8 +273,7 @@ def main():
     try:
         monitor.bot.send_message(
             chat_id=monitor.chat_id,
-            text="🤖 Monitor de noticias Ecuador iniciado correctamente 
-✅"
+            text="🤖 Monitor de noticias Ecuador iniciado correctamente ✅"
         )
         print("✅ Test de Telegram exitoso")
     except Exception as e:
