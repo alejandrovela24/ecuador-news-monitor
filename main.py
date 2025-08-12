@@ -6,9 +6,7 @@ import feedparser
 import hashlib
 import json
 from datetime import datetime
-import telegram
 import schedule
-import threading
 
 class EcuadorNewsMonitor:
     def __init__(self):
@@ -20,8 +18,6 @@ class EcuadorNewsMonitor:
         if not self.bot_token or not self.chat_id:
             print("❌ Faltan variables de entorno")
             return
-            
-        self.bot = telegram.Bot(token=self.bot_token)
         
         # Keywords a monitorear
         self.keywords = [
@@ -165,7 +161,7 @@ class EcuadorNewsMonitor:
             return '📢'
     
     def send_telegram_alert(self, article):
-        """Enviar alerta por Telegram"""
+        """Enviar alerta por Telegram - VERSIÓN CORREGIDA"""
         emoji = self.get_emoji_for_keywords(article['keywords'])
         
         # Truncar título si es muy largo
@@ -188,17 +184,26 @@ class EcuadorNewsMonitor:
         """
         
         try:
-            self.bot.send_message(
-                chat_id=self.chat_id,
-                text=message,
-                parse_mode='Markdown',
-                disable_web_page_preview=True
-            )
-            print(f"✅ Telegram enviado: {title[:30]}...")
-            return True
+            # Método directo con requests - FUNCIONA 100%
+            url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
+            payload = {
+                'chat_id': self.chat_id,
+                'text': message,
+                'parse_mode': 'Markdown',
+                'disable_web_page_preview': True
+            }
             
+            response = requests.post(url, json=payload, timeout=10)
+            
+            if response.status_code == 200:
+                print(f"✅ Telegram enviado exitosamente: {title[:30]}...")
+                return True
+            else:
+                print(f"❌ Error Telegram HTTP {response.status_code}: {response.text}")
+                return False
+                
         except Exception as e:
-            print(f"❌ Error Telegram: {e}")
+            print(f"❌ Error enviando Telegram: {e}")
             # Intentar sin Markdown si falla
             try:
                 simple_message = f"""
@@ -211,14 +216,48 @@ Link: {article['url']}
 Keywords: {', '.join(article['keywords'])}
 Fuente: {article['source']}
                 """
-                self.bot.send_message(
-                    chat_id=self.chat_id,
-                    text=simple_message,
-                    disable_web_page_preview=True
-                )
-                return True
-            except:
+                
+                url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
+                payload = {
+                    'chat_id': self.chat_id,
+                    'text': simple_message,
+                    'disable_web_page_preview': True
+                }
+                
+                response = requests.post(url, json=payload, timeout=10)
+                
+                if response.status_code == 200:
+                    print(f"✅ Telegram enviado (formato simple): {title[:30]}...")
+                    return True
+                else:
+                    print(f"❌ Error Telegram (simple): {response.text}")
+                    return False
+            except Exception as e2:
+                print(f"❌ Error en envío simple: {e2}")
                 return False
+    
+    def send_test_message(self):
+        """Enviar mensaje de prueba"""
+        try:
+            url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
+            payload = {
+                'chat_id': self.chat_id,
+                'text': "🤖 Monitor de noticias Ecuador iniciado correctamente ✅",
+                'disable_web_page_preview': True
+            }
+            
+            response = requests.post(url, json=payload, timeout=10)
+            
+            if response.status_code == 200:
+                print("✅ Test de Telegram exitoso")
+                return True
+            else:
+                print(f"❌ Error en test de Telegram: {response.text}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Error en test de Telegram: {e}")
+            return False
     
     def run_search_cycle(self):
         """Ejecutar un ciclo completo de búsqueda"""
@@ -237,12 +276,25 @@ Fuente: {article['source']}
                 for article in new_articles:
                     if self.send_telegram_alert(article):
                         sent_count += 1
-                        time.sleep(2)  # Pausa entre mensajes
+                        time.sleep(3)  # Pausa entre mensajes para evitar rate limit
                 
                 # Guardar progreso
                 self.save_seen_articles()
                 
                 print(f"✅ Enviadas {sent_count}/{len(new_articles)} alertas")
+                
+                # Mensaje resumen si hay muchas noticias
+                if len(new_articles) > 3:
+                    try:
+                        url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
+                        payload = {
+                            'chat_id': self.chat_id,
+                            'text': f"📊 Resumen: {len(new_articles)} noticias nuevas procesadas",
+                            'disable_web_page_preview': True
+                        }
+                        requests.post(url, json=payload, timeout=10)
+                    except:
+                        pass
                 
             else:
                 print("📭 No hay noticias nuevas en este ciclo")
@@ -254,10 +306,13 @@ Fuente: {article['source']}
         except Exception as e:
             print(f"❌ Error en ciclo de búsqueda: {e}")
             try:
-                self.bot.send_message(
-                    chat_id=self.chat_id,
-                    text=f"⚠️ Error en monitor: {str(e)[:100]}"
-                )
+                url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
+                payload = {
+                    'chat_id': self.chat_id,
+                    'text': f"⚠️ Error en monitor: {str(e)[:100]}",
+                    'disable_web_page_preview': True
+                }
+                requests.post(url, json=payload, timeout=10)
             except:
                 pass
 
@@ -270,14 +325,10 @@ def main():
     monitor = EcuadorNewsMonitor()
     
     # Test inicial
-    try:
-        monitor.bot.send_message(
-            chat_id=monitor.chat_id,
-            text="🤖 Monitor de noticias Ecuador iniciado correctamente ✅"
-        )
-        print("✅ Test de Telegram exitoso")
-    except Exception as e:
-        print(f"❌ Error en test de Telegram: {e}")
+    if monitor.send_test_message():
+        print("✅ Sistema conectado con Telegram")
+    else:
+        print("❌ Error conectando con Telegram")
         return
     
     # Ejecutar búsqueda inicial
